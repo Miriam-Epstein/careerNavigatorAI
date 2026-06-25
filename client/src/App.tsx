@@ -1,66 +1,85 @@
 import { useEffect, useState } from 'react'
 
 type Question = {
-  id: number
-  text: string
-  weights: Record<string, number>
+  question: string
+  options: string[]
 }
 
-type AppData = {
-  questions: Question[]
-  professions: Record<string, string>
+type Profession = {
+  profession: string
+  match_percentage: number
+  explanation: string
 }
+
+type Phase = 'loading' | 'quiz' | 'analyzing' | 'results'
 
 export default function App() {
-  const [data, setData] = useState<AppData | null>(null)
+  const [phase, setPhase] = useState<Phase>('loading')
+  const [questions, setQuestions] = useState<Question[]>([])
+  const [answers, setAnswers] = useState<string[]>([])
   const [step, setStep] = useState(0)
-  const [scores, setScores] = useState<Record<string, number>>({})
+  const [results, setResults] = useState<Profession[]>([])
 
-  useEffect(() => {
-    fetch('/data.json').then(r => r.json()).then(setData)
-  }, [])
+  const loadQuestions = () => {
+    setPhase('loading')
+    setAnswers([])
+    setStep(0)
+    setResults([])
+    fetch('/api/generate-questions', { method: 'POST' })
+      .then(r => r.json())
+      .then(data => { setQuestions(data); setPhase('quiz') })
+  }
 
-  if (!data) return (
+  useEffect(() => { loadQuestions() }, [])
+
+  const handleAnswer = (option: string) => {
+    const newAnswers = [...answers, option]
+    setAnswers(newAnswers)
+
+    if (step + 1 < questions.length) {
+      setStep(s => s + 1)
+    } else {
+      setPhase('analyzing')
+      fetch('/api/analyze-results', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ questions, answers: newAnswers }),
+      })
+        .then(r => r.json())
+        .then(data => { setResults(data); setPhase('results') })
+    }
+  }
+
+  if (phase === 'loading' || phase === 'analyzing') return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
-      <span className="text-slate-400 text-sm tracking-wide">טוען...</span>
+      <span className="text-slate-400 text-sm tracking-wide">
+        {phase === 'loading' ? 'טוען שאלות...' : 'מנתח תוצאות...'}
+      </span>
     </div>
   )
 
-  const { questions, professions } = data
-
-  const handleAnswer = (yes: boolean) => {
-    if (yes) {
-      const weights = questions[step].weights
-      setScores(prev => {
-        const next = { ...prev }
-        for (const [key, val] of Object.entries(weights)) {
-          next[key] = (next[key] ?? 0) + val
-        }
-        return next
-      })
-    }
-    setStep(s => s + 1)
-  }
-
-  const restart = () => { setStep(0); setScores({}) }
-
-  if (step >= questions.length) {
-    const topKey = Object.keys(professions).reduce((a, b) => (scores[a] ?? 0) >= (scores[b] ?? 0) ? a : b)
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
-        <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-12 max-w-sm w-full text-center space-y-5">
-          <p className="text-slate-400 text-sm tracking-widest uppercase">המקצוע המומלץ עבורך</p>
-          <h1 className="text-4xl font-bold text-slate-800 leading-tight">{professions[topKey]}</h1>
-          <button
-            onClick={restart}
-            className="mt-2 px-8 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 active:scale-95 transition-all duration-150"
-          >
-            התחל מחדש
-          </button>
-        </div>
+  if (phase === 'results') return (
+    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
+      <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-10 max-w-md w-full space-y-6">
+        <p className="text-slate-400 text-sm tracking-widest uppercase text-center">המקצועות המומלצים עבורך</p>
+        {results.map((r, i) => (
+          <div key={i} className="space-y-1 border-b border-slate-100 pb-4 last:border-0">
+            <div className="flex justify-between items-center">
+              <span className="text-lg font-bold text-slate-800">{r.profession}</span>
+              <span className="text-indigo-600 font-semibold text-sm">{r.match_percentage}%</span>
+            </div>
+            <p className="text-slate-500 text-sm leading-relaxed">{r.explanation}</p>
+          </div>
+        ))}
+        <button
+          onClick={loadQuestions}
+          className="w-full py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 active:scale-95 transition-all duration-150"
+        >
+          התחל מחדש
+        </button>
       </div>
-    )
-  }
+    </div>
+  )
 
   const progress = (step / questions.length) * 100
 
@@ -92,22 +111,19 @@ export default function App() {
         </div>
 
         <h2 className="text-xl font-semibold text-slate-800 text-center leading-relaxed">
-          {questions[step].text}
+          {questions[step].question}
         </h2>
 
-        <div className="flex gap-3">
-          <button
-            onClick={() => handleAnswer(true)}
-            className="flex-1 py-3 bg-indigo-600 text-white rounded-2xl text-base font-medium hover:bg-indigo-700 active:scale-95 shadow-[0_4px_14px_rgba(99,102,241,0.35)] transition-all duration-150"
-          >
-            כן
-          </button>
-          <button
-            onClick={() => handleAnswer(false)}
-            className="flex-1 py-3 bg-slate-100 text-slate-600 rounded-2xl text-base font-medium hover:bg-slate-200 active:scale-95 transition-all duration-150"
-          >
-            לא
-          </button>
+        <div className="flex flex-col gap-3">
+          {questions[step].options.map((opt, i) => (
+            <button
+              key={i}
+              onClick={() => handleAnswer(opt)}
+              className="w-full py-3 px-4 bg-slate-100 text-slate-700 rounded-2xl text-base font-medium hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 transition-all duration-150 text-right"
+            >
+              {opt}
+            </button>
+          ))}
         </div>
 
       </div>
