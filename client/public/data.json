@@ -1,0 +1,45 @@
+{
+  "questions": [
+    {
+      "id": 1,
+      "text": "האם אתה אוהב לעבוד עם אנשים?",
+      "weights": {
+        "teacher": 5,
+        "social_worker": 7,
+        "graphic_designer": 0
+      }
+    },
+    {
+      "id": 2,
+      "text": "האם אתה נהנה מעבודה יצירתית וויזואלית?",
+      "weights": {
+        "teacher": 2,
+        "social_worker": 1,
+        "graphic_designer": 8
+      }
+    },
+    {
+      "id": 3,
+      "text": "האם אתה מרגיש סיפוק בעזרה לאנשים בצרות?",
+      "weights": {
+        "teacher": 4,
+        "social_worker": 9,
+        "graphic_designer": 1
+      }
+    },
+    {
+      "id": 4,
+      "text": "האם אתה אוהב להסביר דברים ולהדריך אחרים?",
+      "weights": {
+        "teacher": 9,
+        "social_worker": 5,
+        "graphic_designer": 2
+      }
+    }
+  ],
+  "professions": {
+    "teacher": "מורה",
+    "social_worker": "עובד סוציאלי",
+    "graphic_designer": "גרפיקאי"
+  }
+}
