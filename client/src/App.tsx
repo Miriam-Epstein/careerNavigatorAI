@@ -11,87 +11,71 @@ type Profession = {
   explanation: string
 }
 
-type Phase = 'intro' | 'loading' | 'quiz' | 'analyzing' | 'results'
+type AgentResponse =
+  | { done: false; next_question: Question; results: null }
+  | { done: true; next_question: null; results: Profession[] }
+
+type Phase = 'loading' | 'quiz' | 'results'
+
+const SESSION_KEY = 'career_navigator_session_id'
+
+async function createSession(): Promise<string> {
+  const r = await fetch('/api/session', { method: 'POST' })
+  const { sessionId } = await r.json()
+  localStorage.setItem(SESSION_KEY, sessionId)
+  return sessionId
+}
+
+async function callAgent(sessionId: string, answer?: string): Promise<AgentResponse> {
+  const r = await fetch('/api/agent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ sessionId, answer }),
+  })
+  return r.json()
+}
 
 export default function App() {
-  const [phase, setPhase] = useState<Phase>('intro')
-  const [questions, setQuestions] = useState<Question[]>([])
-  const [answers, setAnswers] = useState<string[]>([])
-  const [step, setStep] = useState(0)
+  const [phase, setPhase] = useState<Phase>('loading')
+  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null)
+  const [questionCount, setQuestionCount] = useState(0)
   const [results, setResults] = useState<Profession[]>([])
-  const [userText, setUserText] = useState('')
+  const [sessionId, setSessionId] = useState<string | null>(null)
 
-  const loadQuestions = (text: string) => {
+  const startSession = async () => {
     setPhase('loading')
-    setAnswers([])
-    setStep(0)
+    setQuestionCount(0)
     setResults([])
-    fetch('/api/generate-questions', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userText: text }),
-    })
-      .then(r => r.json())
-      .then(data => { setQuestions(data); setPhase('quiz') })
-  }
-
-  const restart = () => { setUserText(''); setPhase('intro') }
-
-  useEffect(() => {}, [])
-
-  const handleAnswer = (option: string) => {
-    const newAnswers = [...answers, option]
-    setAnswers(newAnswers)
-
-    if (step + 1 < questions.length) {
-      setStep(s => s + 1)
-    } else {
-      setPhase('analyzing')
-      fetch('/api/analyze-results', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ questions, answers: newAnswers, userText }),
-      })
-        .then(r => r.json())
-        .then(data => { setResults(data); setPhase('results') })
+    const id = await createSession()
+    setSessionId(id)
+    const data = await callAgent(id)
+    if (!data.done && data.next_question) {
+      setCurrentQuestion(data.next_question)
+      setQuestionCount(1)
+      setPhase('quiz')
     }
   }
 
-  if (phase === 'intro') return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
-      <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-10 max-w-sm w-full space-y-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-slate-800">career</span>
-            <span className="text-indigo-600">Navigator</span>
-            <span className="text-slate-800">AI</span>
-          </h1>
-          <p className="text-slate-400 text-xs tracking-widest mt-1">מצא את הקריירה שמתאימה לך</p>
-        </div>
-        <p className="text-slate-600 text-sm text-center">ספר לנו קצת על עצמך, תחומי העניין שלך, כישוריך, או מה שחשוב לך בעבודה</p>
-        <textarea
-          className="w-full rounded-2xl border border-slate-200 p-4 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          rows={4}
-          placeholder="לדוגמה: אני אוהב לעבוד עם אנשים, יש לי כישורים טכניים..."
-          value={userText}
-          onChange={e => setUserText(e.target.value)}
-          dir="rtl"
-        />
-        <button
-          onClick={() => loadQuestions(userText)}
-          disabled={!userText.trim()}
-          className="w-full py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          המשך
-        </button>
-      </div>
-    </div>
-  )
+  useEffect(() => { startSession() }, [])
 
-  if (phase === 'loading' || phase === 'analyzing') return (
+  const handleAnswer = async (option: string) => {
+    if (!currentQuestion || !sessionId) return
+    setPhase('loading')
+    const data = await callAgent(sessionId, option)
+    if (data.done && data.results) {
+      setResults(data.results)
+      setPhase('results')
+    } else if (!data.done && data.next_question) {
+      setCurrentQuestion(data.next_question)
+      setQuestionCount(q => q + 1)
+      setPhase('quiz')
+    }
+  }
+
+  if (phase === 'loading') return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
       <span className="text-slate-400 text-sm tracking-wide">
-        {phase === 'loading' ? 'טוען שאלות...' : 'מנתח תוצאות...'}
+        {questionCount === 0 ? 'טוען שאלות...' : 'מעבד תשובה...'}
       </span>
     </div>
   )
@@ -110,7 +94,7 @@ export default function App() {
           </div>
         ))}
         <button
-          onClick={restart}
+          onClick={startSession}
           className="w-full py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 active:scale-95 transition-all duration-150"
         >
           התחל מחדש
@@ -119,7 +103,7 @@ export default function App() {
     </div>
   )
 
-  const progress = (step / questions.length) * 100
+  const progress = (questionCount / (questionCount + 1)) * 100
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6 gap-6">
@@ -137,8 +121,7 @@ export default function App() {
 
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-slate-400">
-            <span>שאלה {step + 1}</span>
-            <span>{questions.length}</span>
+            <span>שאלה {questionCount}</span>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
             <div
@@ -149,11 +132,11 @@ export default function App() {
         </div>
 
         <h2 className="text-xl font-semibold text-slate-800 text-center leading-relaxed">
-          {questions[step].question}
+          {currentQuestion!.question}
         </h2>
 
         <div className="flex flex-col gap-3">
-          {questions[step].options.map((opt, i) => (
+          {currentQuestion!.options.map((opt, i) => (
             <button
               key={i}
               onClick={() => handleAnswer(opt)}
