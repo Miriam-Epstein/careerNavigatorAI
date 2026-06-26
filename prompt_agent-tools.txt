@@ -1,0 +1,74 @@
+בס"ד
+
+משימה:
+להרחיב את מערכת ה AI הקיימת למערכת Agent חכמה שמנהלת תהליך דינמי של אבחון והמלצה על מקצוע. 
+המערכת תחליט באופן עצמאי האם להמשיך לשאול שאלות או לעבור לשלב ההמלצה הסופית.
+
+רקע:
+במערכת הנוכחית קיימת לוגיקה פשוטה של שאלות ותשובות לצורך התאמת מקצוע. כעת נדרש לשדרג את המערכת כך שתעבוד כ Agent עם זיכרון ולוגיקה דינמית, ותוכל לנהל שיחה מתמשכת עם המשתמש עד לקבלת החלטה.
+
+אפיון טכני:
+יש לממש Agent בצד השרת אשר מנהל לולאה של אינטראקציה עם Gemini.
+ה Agent מקבל בכל סבב את היסטוריית השיחה מה DB ומחליט האם:
+
+* להמשיך ולשאול שאלה נוספת
+* או להתקדם לשלב ניתוח סופי והמלצה על מקצוע
+
+יתווסף Tool בשרת אשר מקבל שאלות ותשובות ומחזיר רשימת כישורים עם אחוזי התאמה.
+ה Agent יכול לקרוא ל Tool כאשר נדרש ניתוח ביניים של הנתונים.
+
+יש לממש מנגנון loop control אשר מריץ את הקריאות ל Tools ומחזיר את התוצאות חזרה ל Gemini עד לקבלת תשובה סופית.
+יש להגביל את מספר האיטרציות בלולאה כדי למנוע ריצה אינסופית.
+
+בצד הקליינט יש להציג קומפוננטה דינמית בהתאם למצב:
+
+* הצגת שאלות כאשר התהליך עדיין פעיל
+* הצגת המלצה סופית כאשר מתקבלת תשובה מלאה מה Agent
+
+המערכת תמשיך להשתמש ב Gemini דרך @google/genai עם תמיכה ב fallback בין מודלים, שימוש בresponseSchema, ES Modules, CORS וטעינת מפתח API מקובץ סביבה.
+
+*******************************************************
+
+Task:
+To expand the existing AI system into a smart Agent system that manages a dynamic process of diagnosis and career recommendation.
+The system will independently decide whether to continue asking questions or move on to the final recommendation stage.
+
+Background:
+The current system has a simple logic of questions and answers for career matching. Now it is necessary to upgrade the system so that it works as an Agent with memory and dynamic logic, and can have an ongoing conversation with the user until a decision is made.
+
+Technical characterization:
+An Agent must be implemented on the server side that manages a loop of interaction with Gemini.
+The Agent receives the conversation histohis User@DESKTOP-L9S4R74 MINGW64 ~/Desktop/קורס AI/career-navigator-ai (feat/ai-agent-tools)
+$ git add -f prompt_agent-tools.txt
+
+This User@DESKTOP-L9S4R74 MINGW64 ~/Desktop/קורס AI/career-navigator-ai (feat/ai-agent-tools)
+$ git status
+On branch feat/ai-agent-tools
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        modified:   prompt_base-stage-static-questions.txt
+        modified:   prompt_gemini-integration.txt
+
+
+This User@DESKTOP-L9S4R74 MINGW64 ~/Desktop/קורס AI/career-navigator-ai (feat/ai-agent-tools)
+$ ry from the DB in each round and decides whether to:
+
+* Continue asking another question
+* or proceed to the final analysis and career recommendation stage
+
+A Tool will be added to the server that receives questions and answers and returns a list of skills with matching percentages.
+The Agent can call the Tool when intermediate analysis of the data is required.
+
+A loop control mechanism must be implemented that runs the calls to Tools and returns the results back to Gemini until a final answer is received.
+The number of iterations in the loop must be limited to prevent infinite running.
+
+On the client side, a dynamic component must be presented depending on the state:
+
+* Displaying questions while the process is still active
+* Displaying a final recommendation when a complete answer is received from the Agent
+
+The system will continue to use Gemini via @google/genai with support for fallback between models, use of responseSchema, ES Modules, CORS, and loading an API key from an environment file.
+
+*****************************************************
+
+

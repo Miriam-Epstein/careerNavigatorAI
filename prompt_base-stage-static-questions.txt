@@ -1,0 +1,80 @@
+
+בס"ד
+
+
+תפקיד: מפתח Frontend Senior ואדריכל תוכנה.
+
+מטרה: פיתוח אפליקציית להמלצת מקצוע על בסיס שאלון בן 4 שאלות ומשקלי ניקוד.
+
+סטאק: React , Vite, TypeScript, Tailwind CSS.
+
+נתונים: השאלות, המקצועות והמשקלים ינוהלו בקובץ JSON נפרד וייטענו בזמן ריצה.
+אובייקט נתונים: 
+
+{
+  "questions": [
+    {
+      "id": 1,
+      "text": "האם אתה אוהב לעבוד עם אנשים?",
+      "weights": {
+        "teacher": 5,
+        "social_worker": 7,
+        "graphic_designer": 0
+      }
+    }
+  ],
+  "professions": {
+    "teacher": "מורה",
+    "social_worker": "עובד סוציאלי",
+    "graphic_designer": "גרפיקאי"
+  }
+}
+
+לוגיקה: תשובת "כן" מוסיפה ניקוד לפי המשקלים, תשובת "לא" אינה מוסיפה ניקוד.
+
+תוצאה: בסיום יוצג המקצוע בעל הניקוד הגבוה ביותר עם אפשרות להתחיל מחדש.
+
+------------------------------------מתורגם לאנגלית------------------------------------
+
+Role: Senior Frontend Developer and Software Architect.
+
+Objective: Develop a career recommendation application based on a 4-question questionnaire and scoring weights.
+
+Stack: React, Vite, TypeScript, Tailwind CSS.
+
+Data: Questions, professions, and weights will be managed in a separate JSON file and loaded at runtime.
+Data Object:
+
+JSON
+{
+  "questions": [
+    {
+      "id": 1,
+      "text": "האם אתה אוהב לעבוד עם אנשים?",
+      "weights": {
+        "teacher": 5,
+        "social_worker": 7,
+        "graphic_designer": 0
+      }
+    }
+  ],
+  "professions": {
+    "teacher": "מורה",
+    "social_worker": "עובד סוציאלי",
+    "graphic_designer": "גרפיקאי"
+  }
+}
+Logic: A "Yes" answer adds points according to the weights; a "No" answer does not add points.
+
+Result: Upon completion, the profession with the highest score will be displayed, along with an option to restart.
+
+
+********************************************
+יצרתי קובץ INIT ואז ביצעתי עוד שני שינוים על האפלקציה שנוצרה.
+1. כותרת שם של האפלקציה
+2. הורדת שאלה X מתוך Y.
+*****************************************************
+
+וכרגע זה בסיס של הפרוקיט כשעורי בית של שיעור 2.
+
+
