@@ -12,8 +12,9 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// Initialize Google GenAI client
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-const MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+const MODELS = ['gemini-2.0-flash', 'gemini-2.5-flash'];
 
 async function callGemini(prompt, responseSchema) {
   for (let i = 0; i < MODELS.length; i++) {
@@ -27,12 +28,16 @@ async function callGemini(prompt, responseSchema) {
     } catch (err) {
       const isQuota = err?.status === 429 || /quota/i.test(err?.message ?? '');
       if (isQuota && i < MODELS.length - 1) continue;
+      console.error(`Model ${MODELS[i]} failed:`, err.message);
       throw err;
     }
   }
 }
 
+// API endpoint to generate questions
 app.post('/api/generate-questions', async (req, res) => {
+  const { userText } = req.body;
+
   const schema = {
     type: Type.ARRAY,
     minItems: 4,
@@ -49,7 +54,8 @@ app.post('/api/generate-questions', async (req, res) => {
 
   const prompt = `
     אתה מומחה לאבחון תעסוקתי.
-    צור בדיוק 4 שאלות אמריקאיות מגוונות בעברית לאבחון תעסוקתי ראשוני.
+    המשתמש תיאר את עצמו כך: "${userText}"
+    צור בדיוק 4 שאלות אמריקאיות מותאמות אישית בעברית לאבחון תעסוקתי, בהתאם לתיאור המשתמש.
     לכל שאלה בדיוק 4 אפשרויות תשובה בעברית.
     השאלות יכסו תחומים שונים: אישיות, כישורים, סביבת עבודה, תחומי עניין.
     החזר JSON בלבד לפי הסכמה.
@@ -63,8 +69,6 @@ app.post('/api/generate-questions', async (req, res) => {
 });
 
 app.post('/api/analyze-results', async (req, res) => {
-  const { questions, answers } = req.body;
-
   const schema = {
     type: Type.ARRAY,
     minItems: 3,
@@ -80,17 +84,20 @@ app.post('/api/analyze-results', async (req, res) => {
     },
   };
 
+  const { questions, answers, userText } = req.body;
+
   const answersText = questions
     .map((q, i) => `שאלה: ${q.question}\nתשובה: ${answers[i]}`)
     .join('\n\n');
 
   const prompt = `
     אתה מומחה לאבחון תעסוקתי.
+    המשתמש תיאר את עצמו כך: "${userText}"
     להלן 4 שאלות ותשובות שמשתמש בחר:
 
     ${answersText}
 
-    נתח את הבחירות והחזר את 3 המקצועות המתאימים ביותר.
+    נתח את הבחירות ואת תיאור המשתמש והחזר את 3 המקצועות המתאימים ביותר.
     לכל מקצוע: שם בעברית, אחוז התאמה (0–100), הסבר קצר בעברית.
     החזר JSON בלבד לפי הסכמה.
   `;
