@@ -16,7 +16,8 @@ app.use(express.json());
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 const MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
-const MAX_ITERATIONS = 6;
+const MAX_ITERATIONS = 8;
+const MIN_QUESTIONS = 3;
 const SESSIONS_DIR = resolve(__dirname, 'sessions');
 
 // ── Session helpers ──────────────────────────────────────────────────────────
@@ -53,15 +54,9 @@ function createSession() {
 
 // ── Gemini helpers ───────────────────────────────────────────────────────────
 
-async function callGemini(contents, tools, responseSchema) {
+async function callGemini(contents, config = {}) {
   for (let i = 0; i < MODELS.length; i++) {
     try {
-      const config = {};
-      if (responseSchema) {
-        config.responseMimeType = 'application/json';
-        config.responseSchema = responseSchema;
-      }
-      if (tools) config.tools = tools;
       const response = await ai.models.generateContent({ model: MODELS[i], contents, config });
       return response;
     } catch (err) {
@@ -115,8 +110,7 @@ async function executeAnalyzeSkills(qaPairs) {
   const text = qaPairs.map(p => `שאלה: ${p.question}\nתשובה: ${p.answer}`).join('\n\n');
   const result = await callGemini(
     `נתח את התשובות הבאות והחזר רשימת כישורים עם אחוזי התאמה:\n\n${text}`,
-    null,
-    skillsSchema
+    { responseMimeType: 'application/json', responseSchema: skillsSchema }
   );
   return JSON.parse(result.text);
 }
@@ -152,6 +146,108 @@ const resultsSchema = {
   },
 };
 
+// ── Agent Loop ───────────────────────────────────────────────────────────────
+
+function buildSystemPrompt(session) {
+  const historyText = session.history.filter(h => h.answer).length === 0
+    ? 'עדיין לא נשאלו שאלות.'
+    : session.history
+        .filter(h => h.answer)
+        .map((h, i) => `${i + 1}. שאלה: ${h.question}\n   תשובה: ${h.answer}`)
+        .join('\n');
+
+  const skillsText = session.skillsAnalysis
+    ? `\nניתוח כישורים שבוצע:\n${session.skillsAnalysis.map(s => `- ${s.skill}: ${s.match_percentage}%`).join('\n')}`
+    : '';
+
+  const answeredCount = session.history.filter(h => h.answer).length;
+  const canFinish = answeredCount >= MIN_QUESTIONS && session.skillsAnalysis !== null;
+  const finishLine = canFinish
+    ? 'מותר להחזיר המלצה סופית.'
+    : 'אסור להחזיר המלצה סופית עדיין! יש רק ' + answeredCount + ' תשובות.';
+
+  return `אתה סוכן אבחון תעסוקתי חכם.
+המשתמש תיאר את עצמו: "${session.userText}"
+היסטוריית השיחה עד כה (${answeredCount} תשובות):
+${historyText}${skillsText}
+
+כללים מחייבים:
+- חובה לשאול לפחות ${MIN_QUESTIONS} שאלות לפני כל החלטה סופית. כרגע יש ${answeredCount} תשובות.
+- אם יש ${MIN_QUESTIONS}+ תשובות ועדיין לא בוצע ניתוח כישורים — קרא ל-analyze_skills.
+- אם כבר בוצע ניתוח כישורים — הגדר done=true והחזר מקצוע אחד במערך results.
+- אם יש פחות מ-${MIN_QUESTIONS} תשובות — חובה done=false ושאלה חדשה.
+${finishLine}`;
+}
+
+async function runAgentLoop(session) {
+  let iterations = 0;
+  const answeredCount = () => session.history.filter(h => h.answer).length;
+
+  while (iterations < MAX_ITERATIONS) {
+    iterations++;
+    console.log(`\n[Agent] iteration=${iterations} answered=${answeredCount()} skillsAnalysis=${!!session.skillsAnalysis}`);
+
+    const systemPrompt = buildSystemPrompt(session);
+
+    // Step 1: Ask model to decide — may call a tool (skip if skills already analyzed)
+    if (!session.skillsAnalysis) {
+      const toolResponse = await callGemini(
+        [{ role: 'user', parts: [{ text: systemPrompt }] }],
+        { tools: [analyzeSkillsTool] }
+      );
+
+      const parts = toolResponse.candidates?.[0]?.content?.parts ?? [];
+      const toolCallPart = parts.find(p => p.functionCall);
+
+      if (toolCallPart) {
+        const { name, args } = toolCallPart.functionCall;
+        if (name === 'analyze_skills') {
+          console.log(`[Agent] 🔧 Tool called: analyze_skills with ${args.qa_pairs?.length} pairs`);
+          const skillsResult = await executeAnalyzeSkills(args.qa_pairs);
+          console.log(`[Agent] ✅ Skills result:`, JSON.stringify(skillsResult, null, 2));
+          session.skillsAnalysis = skillsResult;
+          session.agentLog.push({ iteration: iterations, action: 'tool_call', tool: name, result: skillsResult, at: new Date().toISOString() });
+          continue;
+        }
+      }
+    }
+
+    // Step 2: No tool call (or skills already exist) — ask model for final JSON decision
+    const finalPrompt = buildSystemPrompt(session) + '\n\nהחזר עכשיו JSON סופי לפי הסכמה.';
+    const finalResponse = await callGemini(
+      finalPrompt,
+      { responseMimeType: 'application/json', responseSchema: resultsSchema }
+    );
+
+    const agentDecision = JSON.parse(finalResponse.text);
+    console.log(`[Agent] decision: done=${agentDecision.done}, question="${agentDecision.next_question?.question ?? '-'}"`);
+
+    // Hard guard: never allow done=true before MIN_QUESTIONS answered
+    if (agentDecision.done && answeredCount() < MIN_QUESTIONS) {
+      console.log(`[Agent] ⚠️  Forced done=false — only ${answeredCount()}/${MIN_QUESTIONS} answers`);
+      agentDecision.done = false;
+      agentDecision.results = null;
+      if (!agentDecision.next_question) {
+        // Model didn't provide a question — ask again
+        continue;
+      }
+    }
+
+    // If skills were already analyzed, force done=true to prevent infinite loop
+    if (session.skillsAnalysis && !agentDecision.done) {
+      console.log('[Agent] ⚠️  Forced done=true — skills already analyzed');
+      agentDecision.done = true;
+      agentDecision.next_question = null;
+    }
+
+    session.agentLog.push({ iteration: iterations, action: 'decision', done: agentDecision.done, at: new Date().toISOString() });
+
+    return agentDecision;
+  }
+
+  throw new Error('Agent loop exceeded max iterations');
+}
+
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 app.post('/api/session', async (req, res) => {
@@ -175,77 +271,27 @@ app.post('/api/agent', async (req, res) => {
     }
   }
 
-  const historyText = session.history.filter(h => h.answer).length === 0
-    ? 'עדיין לא נשאלו שאלות.'
-    : session.history
-        .filter(h => h.answer)
-        .map((h, i) => `${i + 1}. שאלה: ${h.question}\n   תשובה: ${h.answer}`)
-        .join('\n');
-
-  const systemPrompt = `אתה סוכן אבחון תעסוקתי חכם.
-המשתמש תיאר את עצמו: "${session.userText}"
-היסטוריית השיחה עד כה:
-${historyText}
-
-החלט:
-- אם יש מספיק מידע (לפחות 4 שאלות ותשובות), הגדר done=true והחזר 3 המלצות מקצוע.
-- אחרת, הגדר done=false והחזר שאלה הבאה עם 4 אפשרויות בעברית.
-- אם נדרש ניתוח ביניים, קרא לפונקציה analyze_skills.
-החזר JSON בלבד לפי הסכמה.`;
-
   try {
-    let contents = systemPrompt;
-    let iterations = 0;
+    const agentDecision = await runAgentLoop(session);
 
-    while (iterations < MAX_ITERATIONS) {
-      iterations++;
-      const response = await callGemini(contents, [analyzeSkillsTool], null);
-      const parts = response.candidates?.[0]?.content?.parts ?? [];
-      const toolCallPart = parts.find(p => p.functionCall);
-
-      if (toolCallPart) {
-        const { name, args } = toolCallPart.functionCall;
-        if (name === 'analyze_skills') {
-          const skillsResult = await executeAnalyzeSkills(args.qa_pairs);
-
-          session.skillsAnalysis = skillsResult;
-          session.agentLog.push({ iteration: iterations, action: 'tool_call', tool: name, result: skillsResult, at: new Date().toISOString() });
-
-          contents = [
-            { role: 'user', parts: [{ text: systemPrompt }] },
-            { role: 'model', parts: [{ functionCall: toolCallPart.functionCall }] },
-            { role: 'user', parts: [{ functionResponse: { name, response: { output: JSON.stringify(skillsResult) } } }] },
-          ];
-          continue;
-        }
-      }
-
-      const finalResponse = await callGemini(
-        typeof contents === 'string'
-          ? `${contents}\n\nהחזר עכשיו JSON סופי לפי הסכמה.`
-          : [...contents, { role: 'user', parts: [{ text: 'החזר עכשיו JSON סופי לפי הסכמה.' }] }],
-        null,
-        resultsSchema
-      );
-
-      const agentDecision = JSON.parse(finalResponse.text);
-      session.agentLog.push({ iteration: iterations, action: 'decision', done: agentDecision.done, at: new Date().toISOString() });
-
-      if (agentDecision.done) {
-        session.status = 'completed';
-        session.results = agentDecision.results;
-        session.completedAt = new Date().toISOString();
-      } else {
-        session.history.push({ question: agentDecision.next_question.question, options: agentDecision.next_question.options, askedAt: new Date().toISOString(), answer: null, answeredAt: null });
-      }
-
-      session.updatedAt = new Date().toISOString();
-      await saveSession(session);
-
-      return res.json(agentDecision);
+    if (agentDecision.done) {
+      session.status = 'completed';
+      session.results = agentDecision.results;
+      session.completedAt = new Date().toISOString();
+    } else {
+      session.history.push({
+        question: agentDecision.next_question.question,
+        options: agentDecision.next_question.options,
+        askedAt: new Date().toISOString(),
+        answer: null,
+        answeredAt: null,
+      });
     }
 
-    res.status(500).json({ error: 'Agent loop exceeded max iterations' });
+    session.updatedAt = new Date().toISOString();
+    await saveSession(session);
+
+    return res.json(agentDecision);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
