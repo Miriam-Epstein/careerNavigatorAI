@@ -38,7 +38,20 @@ The current system has a simple logic of questions and answers for career matchi
 
 Technical characterization:
 An Agent must be implemented on the server side that manages a loop of interaction with Gemini.
-The Agent receives the conversation history from the DB in each round and decides whether to:
+The Agent receives the conversation histohis User@DESKTOP-L9S4R74 MINGW64 ~/Desktop/קורס AI/career-navigator-ai (feat/ai-agent-tools)
+$ git add -f prompt_agent-tools.txt
+
+This User@DESKTOP-L9S4R74 MINGW64 ~/Desktop/קורס AI/career-navigator-ai (feat/ai-agent-tools)
+$ git status
+On branch feat/ai-agent-tools
+Changes to be committed:
+  (use "git restore --staged <file>..." to unstage)
+        modified:   prompt_base-stage-static-questions.txt
+        modified:   prompt_gemini-integration.txt
+
+
+This User@DESKTOP-L9S4R74 MINGW64 ~/Desktop/קורס AI/career-navigator-ai (feat/ai-agent-tools)
+$ ry from the DB in each round and decides whether to:
 
 * Continue asking another question
 * or proceed to the final analysis and career recommendation stage
