@@ -65,8 +65,8 @@ async function callGemini(contents, tools, responseSchema) {
       const response = await ai.models.generateContent({ model: MODELS[i], contents, config });
       return response;
     } catch (err) {
-      const isQuota = err?.status === 429 || /quota/i.test(err?.message ?? '');
-      if (isQuota && i < MODELS.length - 1) continue;
+      const isRetryable = err?.status === 429 || err?.status === 503 || /quota|unavailable/i.test(err?.message ?? '');
+      if (isRetryable && i < MODELS.length - 1) continue;
       console.error(`Model ${MODELS[i]} failed:`, err.message);
       throw err;
     }
@@ -155,7 +155,7 @@ const resultsSchema = {
 // ── Routes ───────────────────────────────────────────────────────────────────
 
 app.post('/api/session', async (req, res) => {
-  const session = createSession();
+  const session = { ...createSession(), userText: req.body.userText || '' };
   await saveSession(session);
   res.json({ sessionId: session.sessionId });
 });
@@ -183,6 +183,7 @@ app.post('/api/agent', async (req, res) => {
         .join('\n');
 
   const systemPrompt = `אתה סוכן אבחון תעסוקתי חכם.
+המשתמש תיאר את עצמו: "${session.userText}"
 היסטוריית השיחה עד כה:
 ${historyText}
 
