@@ -1,0 +1,77 @@
+בס"ד
+
+שלב שימוש ב TOOL חישוב כישרונות נתון שמיעל את תוצאות  המערכת!
+
+תפקיד: אתה Software Architect בכיר המתמחה ב-Node.js, Agentic AI ו-Google Gemini.
+
+מטרה:
+
+להרחיב את מנגנון ההמלצה כך שההמלצה הסופית לא תתבסס רק על היסטוריית השיחה, אלא גם על ניתוח הכישורים שזוהו אצל המשתמש באמצעות Tool ייעודי.
+
+רקע:
+
+כיום ה Agent מנהל שיחה עם המשתמש, שואל שאלות ובסיום מחזיר המלצות.
+
+בשלב זה, לאחר שה Agent מחליט שנאסף מספיק מידע, עליו להפעיל Tool שמנתח את כל היסטוריית השיחה ומחזיר רשימת כישורים עם אחוז התאמה לכל כישור.
+
+לאחר קבלת תוצאות ה Tool, ה Agent יקבל את הכישורים יחד עם היסטוריית השיחה, וישתמש בשני מקורות המידע כדי להחזיר המלצה אחת סופית ומדויקת יותר.
+
+דרישות טכניות:
+
+יש לממש Agent Loop שבו המודל מחליט האם לשאול שאלה נוספת, להפעיל Tool או להחזיר תשובה סופית.
+
+יש לממש Loop Control למניעת לולאות אינסופיות.
+
+יש ליצור Skills Analysis Tool המקבל את היסטוריית השיחה ומחזיר רשימת כישורים עם אחוז התאמה.
+
+השרת יבצע את ה Tool כאשר ה Agent יבקש אותו, יחזיר את התוצאה ל Agent, ורק לאחר מכן ה Agent יחזיר המלצה סופית על מקצוע אחד.
+
+צד הלקוח ימשיך להציג שאלות כל עוד נדרש מידע נוסף, או את ההמלצה הסופית כאשר התהליך מסתיים.
+
+תוצאה מצופה:
+
+מערכת המלצות מדויקת וחכמה יותר, שבה ההמלצה הסופית מתבססת גם על תוכן השיחה וגם על ניתוח הכישורים שחושבו באמצעות ה Tool.
+
+צור PLAN מלא ומקצועי לפני כתיבת הקוד, ופעל לפי Best Practices וארכיטקטורה מודולרית.
+
+*****************************************************
+
+Step using the TOOL Calculating given talents that optimizes the system results!
+
+Role:
+
+ You are a Senior Software Architect specializing in Node.js, Agentic AI and Google Gemini.
+
+Goal:
+
+Expand the recommendation mechanism so that the final recommendation is not based only on the conversation history, but also on the analysis of the skills identified in the user using a dedicated Tool.
+
+Background:
+
+Currently, the Agent has a conversation with the user, asks questions and finally returns recommendations.
+
+At this stage, after the Agent decides that enough information has been collected, it must run a Tool that analyzes the entire conversation history and returns a list of skills with a percentage of matching for each skill.
+
+After receiving the results of the Tool, the Agent will receive the skills along with the conversation history, and will use both sources of information to return one final and more accurate recommendation.
+
+Technical requirements:
+
+An Agent Loop must be implemented in which the model decides whether to ask another question, run a Tool or return an answer Final.
+
+Loop Control must be implemented to prevent infinite loops.
+
+Create a Skills Analysis Tool that receives the conversation history and returns a list of skills with a matching percentage.
+
+The server will execute the Tool when the Agent requests it, return the result to the Agent, and only then will the Agent return a final recommendation for one profession.
+
+The client side will continue to present questions as long as additional information is required, or the final recommendation when the process ends.
+
+Expected result:
+
+A more accurate and smarter recommendation system, in which the final recommendation is based on both the content of the conversation and the analysis of the skills calculated using the Tool.
+
+Create a complete and professional PLAN before writing the code, and follow Best Practices and modular architecture.
+
+*******************************
+זהו עד כאו פרומפט מקצועי.
+
