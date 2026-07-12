@@ -182,8 +182,31 @@ function IntroCard({ userText, setUserText, onStart }: {
   )
 }
 
+const LOADING_STEPS_INTRO = [
+  'Analyzing your profile...',
+  'Identifying key traits...',
+  'Preparing your questions...',
+]
+
+const LOADING_STEPS_ANSWER = [
+  'Processing your answer...',
+  'Analyzing personality traits...',
+  'Searching career database...',
+  'Formulating career paths...',
+]
+
 function LoadingIndicator({ questionCount }: { questionCount: number }) {
   const ref = useFadeIn()
+  const steps = questionCount === 0 ? LOADING_STEPS_INTRO : LOADING_STEPS_ANSWER
+  const [stepIndex, setStepIndex] = useState(0)
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStepIndex(i => (i + 1) % steps.length)
+    }, 1800)
+    return () => clearInterval(interval)
+  }, [steps.length])
+
   return (
     <div ref={ref} className="flex flex-col items-center gap-5">
       <div className="relative w-11 h-11">
@@ -191,9 +214,29 @@ function LoadingIndicator({ questionCount }: { questionCount: number }) {
         <div className="absolute inset-0 rounded-full border border-transparent border-t-indigo-400/80 animate-spin" />
         <div className="absolute inset-[3px] rounded-full border border-transparent border-t-violet-400/60 animate-spin [animation-duration:0.7s] [animation-direction:reverse]" />
       </div>
-      <p className="text-slate-500 text-sm tracking-wide">
-        {questionCount === 0 ? 'Analyzing your profile...' : 'Processing your answer...'}
+      <p
+        key={stepIndex}
+        className="text-slate-500 text-sm tracking-wide transition-opacity duration-500"
+        style={{ animation: 'fadeText 0.5s ease-out' }}
+      >
+        {steps[stepIndex]}
       </p>
+    </div>
+  )
+}
+
+function AnimatedBar({ target }: { target: number }) {
+  const [width, setWidth] = useState(0)
+  useEffect(() => {
+    const t = setTimeout(() => setWidth(target), 100)
+    return () => clearTimeout(t)
+  }, [target])
+  return (
+    <div className="w-full bg-white/[0.05] rounded-full h-1 overflow-hidden">
+      <div
+        className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500"
+        style={{ width: `${width}%`, transition: 'width 1s ease-out' }}
+      />
     </div>
   )
 }
@@ -221,12 +264,7 @@ function ResultsCard({ results, onRestart }: { results: Profession[]; onRestart:
               </div>
               <span className="shrink-0 text-indigo-400 font-bold text-sm tabular-nums">{r.match_percentage}%</span>
             </div>
-            <div className="w-full bg-white/[0.05] rounded-full h-1 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-700 ease-out"
-                style={{ width: `${r.match_percentage}%` }}
-              />
-            </div>
+            <AnimatedBar target={r.match_percentage} />
             <p className="text-slate-400 text-sm leading-[1.75] tracking-[0.01em]">{r.explanation}</p>
           </div>
         ))}

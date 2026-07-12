@@ -142,7 +142,7 @@ async function callGemini(contents, config = {}) {
 const analyzeSkillsTool = {
   functionDeclarations: [{
     name: 'analyze_skills',
-    description: 'מנתח את תשובות המשתמש עד כה ומחזיר רשימת כישורים עם אחוזי התאמה',
+    description: 'Analyzes the user answers so far and returns a list of skills with match percentages',
     parameters: {
       type: Type.OBJECT,
       required: ['qa_pairs'],
@@ -176,9 +176,9 @@ const skillsSchema = {
 };
 
 async function executeAnalyzeSkills(qaPairs) {
-  const text = qaPairs.map(p => `שאלה: ${p.question}\nתשובה: ${p.answer}`).join('\n\n');
+  const text = qaPairs.map(p => `Q: ${p.question}\nA: ${p.answer}`).join('\n\n');
   const result = await callGemini(
-    `נתח את התשובות הבאות והחזר רשימת כישורים עם אחוזי התאמה:\n\n${text}`,
+    `Analyze the following answers and return a list of skills with match percentages. Respond in English only:\n\n${text}`,
     { responseMimeType: 'application/json', responseSchema: skillsSchema }
   );
   return JSON.parse(result.text);
@@ -219,21 +219,21 @@ const resultsSchema = {
 
 function buildSystemPrompt(session) {
   const historyText = session.history.filter(h => h.answer).length === 0
-    ? 'עדיין לא נשאלו שאלות.'
+    ? 'No questions asked yet.'
     : session.history
         .filter(h => h.answer)
-        .map((h, i) => `${i + 1}. שאלה: ${h.question}\n   תשובה: ${h.answer}`)
+        .map((h, i) => `${i + 1}. Q: ${h.question}\n   A: ${h.answer}`)
         .join('\n');
 
   const skillsText = session.skillsAnalysis
-    ? `\nניתוח כישורים שבוצע:\n${session.skillsAnalysis.map(s => `- ${s.skill}: ${s.match_percentage}%`).join('\n')}`
+    ? `\nSkills analysis completed:\n${session.skillsAnalysis.map(s => `- ${s.skill}: ${s.match_percentage}%`).join('\n')}`
     : '';
 
   // RAG: inject real profession data so the model recommends based on facts
   const ragText = session.skillsAnalysis
-    ? `\n\nמידע אמיתי על מקצועות רלוונטיים (השתמש רק במידע זה להמלצה):\n${
+    ? `\n\nReal profession data (use ONLY this data for your recommendation):\n${
         retrieveProfessions(session.skillsAnalysis)
-          .map(p => `• ${p.title} | שכר ממוצע: ${p.avg_salary_ils.toLocaleString()}₪ | ביקוש: ${p.demand}\n  כישורים נדרשים: ${p.required_skills.join(', ')}\n  ${p.description}`)
+          .map(p => `• ${p.title} | Avg salary: ${p.avg_salary_ils.toLocaleString()}₪ | Demand: ${p.demand}\n  Required skills: ${p.required_skills.join(', ')}\n  ${p.description}`)
           .join('\n')
       }`
     : '';
@@ -241,19 +241,20 @@ function buildSystemPrompt(session) {
   const answeredCount = session.history.filter(h => h.answer).length;
   const canFinish = answeredCount >= MIN_QUESTIONS && session.skillsAnalysis !== null;
   const finishLine = canFinish
-    ? 'מותר להחזיר המלצה סופית.'
-    : 'אסור להחזיר המלצה סופית עדיין! יש רק ' + answeredCount + ' תשובות.';
+    ? 'You may return a final recommendation.'
+    : `Do NOT return a final recommendation yet — only ${answeredCount} answers collected.`;
 
-  return `אתה סוכן אבחון תעסוקתי חכם.
-המשתמש תיאר את עצמו: "${session.userText}"
-היסטוריית השיחה עד כה (${answeredCount} תשובות):
+  return `You are an intelligent career diagnosis agent. Always respond in English only.
+The user described themselves: "${session.userText}"
+Conversation history so far (${answeredCount} answers):
 ${historyText}${skillsText}${ragText}
 
-כללים מחייבים:
-- חובה לשאול לפחות ${MIN_QUESTIONS} שאלות לפני כל החלטה סופית. כרגע יש ${answeredCount} תשובות.
-- אם יש ${MIN_QUESTIONS}+ תשובות ועדיין לא בוצע ניתוח כישורים — קרא ל-analyze_skills.
-- אם כבר בוצע ניתוח כישורים — הגדר done=true והחזר מקצוע אחד במערך results.
-- אם יש פחות מ-${MIN_QUESTIONS} תשובות — חובה done=false ושאלה חדשה.
+Mandatory rules:
+- You MUST ask at least ${MIN_QUESTIONS} questions before making a final decision. Currently ${answeredCount} answers.
+- If there are ${MIN_QUESTIONS}+ answers and skills analysis has NOT been done — call analyze_skills.
+- If skills analysis is already done — set done=true and return one profession in the results array.
+- If fewer than ${MIN_QUESTIONS} answers — you MUST set done=false and provide a new question.
+- All questions, options, and explanations MUST be in English.
 ${finishLine}`;
 }
 
@@ -291,7 +292,7 @@ async function runAgentLoop(session) {
     }
 
     // Step 2: No tool call (or skills already exist) — ask model for final JSON decision
-    const finalPrompt = buildSystemPrompt(session) + '\n\nהחזר עכשיו JSON סופי לפי הסכמה.';
+    const finalPrompt = buildSystemPrompt(session) + '\n\nReturn the final JSON now according to the schema.';
     const finalResponse = await callGemini(
       finalPrompt,
       { responseMimeType: 'application/json', responseSchema: resultsSchema }
@@ -358,7 +359,7 @@ app.post('/api/webhook', async (req, res) => {
   }
 
   const analysis = await callGemini(
-    `נתח את הטקסט הבא של מועמד לעבודה והחזר סיכום, כישורים מובילים והמלצת מקצוע:\n\n"${userText}"`,
+    `Analyze the following candidate text and return a summary, top skills, and profession recommendation. Respond in English only:\n\n"${userText}"`,
     { responseMimeType: 'application/json', responseSchema: summarySchema }
   );
 
