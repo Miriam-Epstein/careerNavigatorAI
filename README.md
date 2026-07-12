@@ -145,6 +145,28 @@ Response:
 
 ---
 
+## MCP Integration
+
+The core AI logic of this system has been packaged as a standalone **MCP (Model Context Protocol) server**, allowing any MCP-compatible client (Claude Desktop, Cursor, etc.) to call the career diagnosis tools directly.
+
+👉 **[career-navigator-mcp](https://github.com/Miriam-Epstein/career-navigator-mcp)**
+
+Exposed tools:
+- `analyze_skills` — analyzes free text and returns a skills list with match percentages
+- `recommend_profession` — receives skills and returns a profession recommendation using RAG
+
+```
+Claude Desktop / Cursor
+    │
+    │  tools/call
+    ▼
+career-navigator-mcp
+    ├── analyze_skills ──► Gemini API
+    └── recommend_profession ──► professions_data.json (RAG)
+```
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |
