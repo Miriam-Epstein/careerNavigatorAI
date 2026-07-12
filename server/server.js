@@ -250,6 +250,43 @@ async function runAgentLoop(session) {
 
 // ── Routes ───────────────────────────────────────────────────────────────────
 
+// ── Webhook (Make / Zapier integration) ─────────────────────────────────────
+// External automation platforms (e.g. Make) POST a lead/user here.
+// The server creates a session, runs a first Gemini analysis, and returns
+// a structured JSON result that Make can use to update a CRM or Google Sheet.
+app.post('/api/webhook', async (req, res) => {
+  const { name, email, userText } = req.body;
+  if (!userText) return res.status(400).json({ error: 'userText is required' });
+
+  const session = { ...createSession(), userText, meta: { name, email } };
+
+  // Ask Gemini for a quick initial analysis of the user's text
+  const summarySchema = {
+    type: Type.OBJECT,
+    required: ['summary', 'top_skills', 'recommended_profession'],
+    properties: {
+      summary: { type: Type.STRING },
+      top_skills: { type: Type.ARRAY, items: { type: Type.STRING } },
+      recommended_profession: { type: Type.STRING },
+    },
+  };
+
+  const analysis = await callGemini(
+    `נתח את הטקסט הבא של מועמד לעבודה והחזר סיכום, כישורים מובילים והמלצת מקצוע:\n\n"${userText}"`,
+    { responseMimeType: 'application/json', responseSchema: summarySchema }
+  );
+
+  session.webhookAnalysis = JSON.parse(analysis.text);
+  await saveSession(session);
+
+  res.json({
+    sessionId: session.sessionId,
+    name,
+    email,
+    analysis: session.webhookAnalysis,
+  });
+});
+
 app.post('/api/session', async (req, res) => {
   const session = { ...createSession(), userText: req.body.userText || '' };
   await saveSession(session);
