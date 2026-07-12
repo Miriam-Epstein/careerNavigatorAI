@@ -86,23 +86,22 @@ export default function App() {
             <span className="text-indigo-600">Navigator</span>
             <span className="text-slate-800">AI</span>
           </h1>
-          <p className="text-slate-400 text-xs tracking-widest mt-1">מצא את הקריירה שמתאימה לך</p>
+          <p className="text-slate-400 text-xs tracking-widest mt-1">Discover the career that fits you</p>
         </div>
-        <p className="text-slate-600 text-sm text-center">ספר לנו קצת על עצמך, תחומי העניין שלך, כישוריך, או מה שחשוב לך בעבודה</p>
+        <p className="text-slate-600 text-sm text-center">Tell us a bit about yourself — your interests, skills, or what matters most to you in a job</p>
         <textarea
           className="w-full rounded-2xl border border-slate-200 p-4 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
           rows={4}
-          placeholder="לדוגמה: אני אוהב לעבוד עם אנשים, יש לי כישורים טכניים..."
+          placeholder="e.g. I enjoy working with people, I have technical skills..."
           value={userText}
           onChange={e => setUserText(e.target.value)}
-          dir="rtl"
         />
         <button
           onClick={() => startSession(userText)}
           disabled={!userText.trim()}
           className="w-full py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
         >
-          המשך
+          Continue
         </button>
       </div>
     </div>
@@ -111,7 +110,7 @@ export default function App() {
   if (phase === 'loading') return (
     <div className="flex items-center justify-center min-h-screen bg-slate-50">
       <span className="text-slate-400 text-sm tracking-wide">
-        {questionCount === 0 ? 'טוען שאלות...' : 'מעבד תשובה...'}
+        {questionCount === 0 ? 'Loading questions...' : 'Processing answer...'}
       </span>
     </div>
   )
@@ -119,7 +118,7 @@ export default function App() {
   if (phase === 'results') return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
       <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-10 max-w-md w-full space-y-6">
-        <p className="text-slate-400 text-sm tracking-widest uppercase text-center">המקצועות המומלצים עבורך</p>
+        <p className="text-slate-400 text-sm tracking-widest uppercase text-center">Recommended careers for you</p>
         {results.map((r, i) => (
           <div key={i} className="space-y-1 border-b border-slate-100 pb-4 last:border-0">
             <div className="flex justify-between items-center">
@@ -133,7 +132,7 @@ export default function App() {
           onClick={() => { setUserText(''); setPhase('intro') }}
           className="w-full py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 active:scale-95 transition-all duration-150"
         >
-          התחל מחדש
+          Start over
         </button>
       </div>
     </div>
@@ -150,14 +149,14 @@ export default function App() {
           <span className="text-indigo-600">Navigator</span>
           <span className="text-slate-800">AI</span>
         </h1>
-        <p className="text-slate-400 text-xs tracking-widest mt-1">מצא את הקריירה שמתאימה לך</p>
+        <p className="text-slate-400 text-xs tracking-widest mt-1">Discover the career that fits you</p>
       </div>
 
       <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-10 max-w-sm w-full space-y-8">
 
         <div className="space-y-1">
           <div className="flex justify-between text-xs text-slate-400">
-            <span>שאלה {questionCount}</span>
+            <span>Question {questionCount}</span>
           </div>
           <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
             <div
@@ -176,7 +175,7 @@ export default function App() {
             <button
               key={i}
               onClick={() => handleAnswer(opt)}
-              className="w-full py-3 px-4 bg-slate-100 text-slate-700 rounded-2xl text-base font-medium hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 transition-all duration-150 text-right"
+              className="w-full py-3 px-4 bg-slate-100 text-slate-700 rounded-2xl text-base font-medium hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 transition-all duration-150 text-left"
             >
               {opt}
             </button>
