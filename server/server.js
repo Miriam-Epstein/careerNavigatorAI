@@ -5,10 +5,39 @@ import express from 'express';
 import cors from 'cors';
 import { GoogleGenAI, Type } from '@google/genai';
 import { readFile, writeFile } from 'fs/promises';
+import { readFileSync } from 'fs';
 import { randomUUID, createHash } from 'crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, '../.env') });
+
+// ── RAG: Professions Knowledge Base ─────────────────────────────────────────
+// Loaded once at startup — used to inject real profession data into the final
+// recommendation prompt instead of relying on the model's internal knowledge.
+const PROFESSIONS_DB = JSON.parse(
+  readFileSync(resolve(__dirname, 'professions_data.json'), 'utf-8')
+);
+
+// Retrieves the most relevant professions from the knowledge base based on
+// the skills identified by the analyze_skills tool.
+function retrieveProfessions(skillsAnalysis) {
+  const topSkills = skillsAnalysis
+    .sort((a, b) => b.match_percentage - a.match_percentage)
+    .slice(0, 3)
+    .map(s => s.skill.toLowerCase());
+
+  const scored = Object.values(PROFESSIONS_DB).map(prof => {
+    const overlap = prof.required_skills.filter(s =>
+      topSkills.some(ts => s.toLowerCase().includes(ts) || ts.includes(s.toLowerCase()))
+    ).length;
+    return { ...prof, _score: overlap };
+  });
+
+  return scored
+    .sort((a, b) => b._score - a._score)
+    .slice(0, 3)
+    .map(({ _score, ...prof }) => prof);
+}
 
 const app = express();
 app.use(cors());
@@ -200,6 +229,15 @@ function buildSystemPrompt(session) {
     ? `\nניתוח כישורים שבוצע:\n${session.skillsAnalysis.map(s => `- ${s.skill}: ${s.match_percentage}%`).join('\n')}`
     : '';
 
+  // RAG: inject real profession data so the model recommends based on facts
+  const ragText = session.skillsAnalysis
+    ? `\n\nמידע אמיתי על מקצועות רלוונטיים (השתמש רק במידע זה להמלצה):\n${
+        retrieveProfessions(session.skillsAnalysis)
+          .map(p => `• ${p.title} | שכר ממוצע: ${p.avg_salary_ils.toLocaleString()}₪ | ביקוש: ${p.demand}\n  כישורים נדרשים: ${p.required_skills.join(', ')}\n  ${p.description}`)
+          .join('\n')
+      }`
+    : '';
+
   const answeredCount = session.history.filter(h => h.answer).length;
   const canFinish = answeredCount >= MIN_QUESTIONS && session.skillsAnalysis !== null;
   const finishLine = canFinish
@@ -209,7 +247,7 @@ function buildSystemPrompt(session) {
   return `אתה סוכן אבחון תעסוקתי חכם.
 המשתמש תיאר את עצמו: "${session.userText}"
 היסטוריית השיחה עד כה (${answeredCount} תשובות):
-${historyText}${skillsText}
+${historyText}${skillsText}${ragText}
 
 כללים מחייבים:
 - חובה לשאול לפחות ${MIN_QUESTIONS} שאלות לפני כל החלטה סופית. כרגע יש ${answeredCount} תשובות.

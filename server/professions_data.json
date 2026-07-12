@@ -1,0 +1,102 @@
+{
+  "software_developer": {
+    "title": "מפתח תוכנה",
+    "avg_salary_ils": 28000,
+    "required_skills": ["JavaScript", "Python", "אלגוריתמים", "עבודה עצמאית", "פתרון בעיות"],
+    "work_environment": "משרד / עבודה מרחוק",
+    "personality_fit": ["אנליטי", "סבלני", "אוהב ללמוד", "עצמאי"],
+    "growth_path": "Junior → Senior → Tech Lead → CTO",
+    "demand": "גבוה מאוד",
+    "description": "מפתח תוכנה בונה מערכות, אפליקציות ואתרים. עובד עם קוד, פותר בעיות טכניות ומשתף פעולה עם צוותים."
+  },
+  "data_scientist": {
+    "title": "מדען נתונים",
+    "avg_salary_ils": 32000,
+    "required_skills": ["Python", "סטטיסטיקה", "Machine Learning", "SQL", "חשיבה אנליטית"],
+    "work_environment": "משרד / היברידי",
+    "personality_fit": ["אנליטי", "סקרן", "מדויק", "אוהב מספרים"],
+    "growth_path": "Analyst → Data Scientist → Lead DS → Head of Data",
+    "demand": "גבוה מאוד",
+    "description": "מדען נתונים מנתח כמויות גדולות של מידע, בונה מודלים חכמים ומסייע לחברות לקבל החלטות מבוססות נתונים."
+  },
+  "product_manager": {
+    "title": "מנהל מוצר",
+    "avg_salary_ils": 30000,
+    "required_skills": ["חשיבה אסטרטגית", "תקשורת", "הבנה טכנולוגית", "ניהול סדרי עדיפויות", "עבודת צוות"],
+    "work_environment": "משרד / היברידי",
+    "personality_fit": ["מנהיגותי", "תקשורתי", "אסטרטגי", "אמפתי"],
+    "growth_path": "APM → PM → Senior PM → VP Product",
+    "demand": "גבוה",
+    "description": "מנהל מוצר מגדיר את החזון של המוצר, עובד עם מפתחים ומעצבים ומוודא שהמוצר עונה על צרכי המשתמשים."
+  },
+  "ux_designer": {
+    "title": "מעצב UX/UI",
+    "avg_salary_ils": 22000,
+    "required_skills": ["Figma", "חשיבה עיצובית", "אמפתיה למשתמש", "יצירתיות", "מחקר משתמשים"],
+    "work_environment": "משרד / עבודה מרחוק",
+    "personality_fit": ["יצירתי", "אמפתי", "מדויק", "אוהב אסתטיקה"],
+    "growth_path": "Junior Designer → UX Designer → Lead Designer → Head of Design",
+    "demand": "גבוה",
+    "description": "מעצב UX/UI יוצר חוויות משתמש נוחות ויפות. אחראי על המראה והתחושה של אפליקציות ואתרים."
+  },
+  "hr_manager": {
+    "title": "מנהל משאבי אנוש",
+    "avg_salary_ils": 20000,
+    "required_skills": ["תקשורת בינאישית", "גיוס עובדים", "פתרון קונפליקטים", "אמפתיה", "ארגון"],
+    "work_environment": "משרד",
+    "personality_fit": ["אנשותי", "תקשורתי", "אמפתי", "מאורגן"],
+    "growth_path": "HR Coordinator → HR Manager → HR Director → CHRO",
+    "demand": "בינוני",
+    "description": "מנהל משאבי אנוש מגייס עובדים, מטפל ברווחתם ומוודא שהארגון פועל בצורה בריאה ומקצועית."
+  },
+  "marketing_manager": {
+    "title": "מנהל שיווק",
+    "avg_salary_ils": 22000,
+    "required_skills": ["יצירתיות", "ניתוח נתונים", "כתיבה שיווקית", "מדיה חברתית", "חשיבה אסטרטגית"],
+    "work_environment": "משרד / היברידי",
+    "personality_fit": ["יצירתי", "תקשורתי", "אסטרטגי", "אנרגטי"],
+    "growth_path": "Marketing Coordinator → Marketing Manager → CMO",
+    "demand": "גבוה",
+    "description": "מנהל שיווק בונה אסטרטגיות לקידום מוצרים ושירותים, מנהל קמפיינים ומנתח תוצאות."
+  },
+  "cybersecurity_analyst": {
+    "title": "אנליסט אבטחת מידע",
+    "avg_salary_ils": 30000,
+    "required_skills": ["רשתות מחשבים", "חשיבה כמו האקר", "Python", "ניתוח סיכונים", "סבלנות"],
+    "work_environment": "משרד / עבודה מרחוק",
+    "personality_fit": ["אנליטי", "סקרן", "מדויק", "אוהב אתגרים"],
+    "growth_path": "SOC Analyst → Security Engineer → CISO",
+    "demand": "גבוה מאוד",
+    "description": "אנליסט אבטחת מידע מגן על מערכות ממתקפות סייבר, מזהה חולשות ומפתח פתרונות הגנה."
+  },
+  "teacher": {
+    "title": "מורה / מדריך",
+    "avg_salary_ils": 14000,
+    "required_skills": ["הסברה", "סבלנות", "אמפתיה", "ידע בתחום", "יצירתיות פדגוגית"],
+    "work_environment": "בית ספר / מכללה / אונליין",
+    "personality_fit": ["אנשותי", "סבלני", "אמפתי", "אוהב ללמד"],
+    "growth_path": "מורה → רכז → מנהל חינוכי",
+    "demand": "גבוה",
+    "description": "מורה מעביר ידע, מעצב דורות ומסייע לאנשים לצמוח. עבודה משמעותית עם השפעה ארוכת טווח."
+  },
+  "project_manager": {
+    "title": "מנהל פרויקטים",
+    "avg_salary_ils": 25000,
+    "required_skills": ["ניהול זמן", "תקשורת", "פתרון בעיות", "ניהול סיכונים", "עבודת צוות"],
+    "work_environment": "משרד / היברידי",
+    "personality_fit": ["מאורגן", "מנהיגותי", "תקשורתי", "לוחץ לתוצאות"],
+    "growth_path": "Project Coordinator → PM → Senior PM → Program Manager",
+    "demand": "גבוה",
+    "description": "מנהל פרויקטים מוביל צוותים להשגת יעדים בזמן ובתקציב. אחראי על תכנון, ביצוע ובקרה."
+  },
+  "content_creator": {
+    "title": "יוצר תוכן / כותב",
+    "avg_salary_ils": 15000,
+    "required_skills": ["כתיבה", "יצירתיות", "SEO", "הבנת קהל יעד", "עריכה"],
+    "work_environment": "עבודה מרחוק / פרילנס",
+    "personality_fit": ["יצירתי", "תקשורתי", "עצמאי", "אוהב לכתוב"],
+    "growth_path": "Copywriter → Content Manager → Head of Content",
+    "demand": "גבוה",
+    "description": "יוצר תוכן מייצר טקסטים, סרטונים ופוסטים שמושכים קהל ומקדמים מותגים ורעיונות."
+  }
+}
