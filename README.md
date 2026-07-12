@@ -16,7 +16,10 @@ Express Server (Node.js)
     │
     ├── Agent Loop ──► Gemini API (gemini-2.5-flash-lite / gemini-2.5-flash)
     │       │
-    │       └── Tool Call: analyze_skills ──► Gemini (structured JSON)
+    │       ├── Tool Call: analyze_skills ──► Gemini (structured JSON)
+    │       │
+    │       └── RAG: retrieveProfessions() ──► professions_data.json
+    │               └── injects real profession data into final prompt
     │
     ├── Session Storage (JSON files)
     │
@@ -73,7 +76,45 @@ Each agent iteration builds a fresh system prompt that includes:
 
 This ensures the model always has full context and cannot skip the minimum question threshold.
 
-### 5. Model Fallback Strategy
+### 5. RAG — Retrieval-Augmented Generation
+Before returning a final career recommendation, the agent retrieves real profession data from a local knowledge base (`professions_data.json`) and injects it into the Gemini prompt.
+
+- **Knowledge base** — 10 professions with real data: average salary, required skills, market demand, career growth path, and description
+- **Retrieval logic** — matches the top skills identified by `analyze_skills` against each profession's required skills, ranks by overlap, and selects the top 3
+- **Augmented prompt** — Gemini receives the instruction: *"use only this data for your recommendation"* — eliminating hallucinations on profession details
+
+```
+skills analysis result
+        ↓
+retrieveProfessions()  →  professions_data.json
+        ↓
+top 3 matching professions injected into prompt
+        ↓
+Gemini recommends based on real facts ✅
+```
+
+### 6. Webhook Caching
+To avoid redundant Gemini calls and reduce API costs, the webhook endpoint caches analysis results in memory using a SHA-256 hash of the input text as the key.
+
+- Cache TTL: **10 minutes**
+- If the same `userText` is received within the TTL window, the server returns the cached result immediately — no Gemini call is made
+- The response includes `fromCache: true` to indicate a cache hit
+
+```
+Incoming userText → SHA-256 hash → found in cache? → return immediately ✅
+                                 → not found?      → call Gemini → cache result → return
+```
+
+### 6. Input Validation & Prompt Injection Protection
+All user input is validated before reaching Gemini, across both `/api/webhook` and `/api/agent`:
+
+- **Empty input** — rejected with `400`
+- **Oversized input** — rejected if over `2000` characters
+- **Prompt injection attempts** — blocked by pattern matching against known attack phrases (e.g. `"ignore all previous instructions"`, `"reveal your API key"`)
+
+This prevents token waste, unexpected model behavior, and potential data leakage.
+
+### 7. Model Fallback Strategy
 Every Gemini call goes through a fallback chain:
 
 ```
