@@ -94,6 +94,7 @@ Gemini recommends based on real facts ✅
 ```
 
 ### 6. Webhook Caching
+
 To avoid redundant Gemini calls and reduce API costs, the webhook endpoint caches analysis results in memory using a SHA-256 hash of the input text as the key.
 
 - Cache TTL: **10 minutes**
@@ -105,7 +106,7 @@ Incoming userText → SHA-256 hash → found in cache? → return immediately �
                                  → not found?      → call Gemini → cache result → return
 ```
 
-### 6. Input Validation & Prompt Injection Protection
+### 7. Input Validation & Prompt Injection Protection
 All user input is validated before reaching Gemini, across both `/api/webhook` and `/api/agent`:
 
 - **Empty input** — rejected with `400`
@@ -114,7 +115,7 @@ All user input is validated before reaching Gemini, across both `/api/webhook` a
 
 This prevents token waste, unexpected model behavior, and potential data leakage.
 
-### 7. Model Fallback Strategy
+### 8. Model Fallback Strategy
 Every Gemini call goes through a fallback chain:
 
 ```
@@ -123,7 +124,7 @@ gemini-2.5-flash-lite  →  (on 429 / quota error)  →  gemini-2.5-flash
 
 This prevents downtime due to quota limits on a single model.
 
-### 6. Webhook — Make / Zapier Integration
+### 9. Webhook — Make / Zapier Integration
 `POST /api/webhook` accepts an incoming lead from any automation platform (Make, Zapier, etc.), immediately runs a Gemini analysis on the user's text, and returns a structured JSON result that the automation can use to update a CRM, Google Sheet, or send a notification.
 
 Request:
@@ -142,6 +143,50 @@ Response:
   }
 }
 ```
+
+---
+
+## UI & Design System
+
+The frontend is built with a **dark glassmorphic aesthetic** — the same visual language used by Linear, Vercel, and Framer.
+
+### Design Tokens
+
+| Token | Value |
+|---|---|
+| Background | `#0c0c10` |
+| Primary accent | `indigo-600` → `violet-600` (gradient) |
+| Card surface | `bg-white/[0.04]` + `backdrop-blur-2xl` |
+| Card border | `border-white/[0.08]` |
+| Text primary | `text-white/90` |
+| Text secondary | `text-slate-400` |
+| Text muted | `text-slate-500` |
+
+### Visual Features
+
+- **Orbs** — two large blurred radial gradients (`blur-[140px]`) anchored to opposite corners, creating depth and ambient light behind the glass cards
+- **Glassmorphism cards** — `backdrop-blur-2xl` + semi-transparent background + subtle white border
+- **Gradient text** — logo uses `bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text`
+- **Fade-in transitions** — every phase mounts with `opacity 0→1` + `translateY 10px→0` via a `useFadeIn` hook (no external dependencies)
+- **Dual spinner** — two concentric rings spinning in opposite directions on the loading screen
+- **Quiz options** — lettered badges (A/B/C/D) with indigo hover state and border animation
+- **Results** — gradient progress bar per profession + `Top Match` badge on the first result
+
+### Component Structure
+
+```
+App
+├── Orbs          — background ambient light (shared)
+├── Logo          — gradient wordmark (shared)
+├── IntroCard     — phase: intro
+├── LoadingIndicator — phase: loading
+├── QuizCard      — phase: quiz
+└── ResultsCard   — phase: results
+```
+
+### Fonts
+
+Inter (Google Fonts) with `-webkit-font-smoothing: antialiased` for crisp rendering.
 
 ---
 

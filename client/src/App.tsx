@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 type Question = {
   question: string
@@ -37,6 +37,44 @@ async function callAgent(sessionId: string, answer?: string): Promise<AgentRespo
     body: JSON.stringify({ sessionId, answer }),
   })
   return r.json()
+}
+
+function useFadeIn() {
+  const ref = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const el = ref.current
+    if (!el) return
+    el.style.opacity = '0'
+    el.style.transform = 'translateY(10px)'
+    el.style.transition = 'opacity 0.4s ease-out, transform 0.4s ease-out'
+    requestAnimationFrame(() => {
+      el.style.opacity = '1'
+      el.style.transform = 'translateY(0)'
+    })
+  }, [])
+  return ref
+}
+
+function Orbs() {
+  return (
+    <>
+      <div className="pointer-events-none absolute -top-40 -left-40 w-[600px] h-[600px] rounded-full bg-indigo-600/[0.12] blur-[140px]" />
+      <div className="pointer-events-none absolute -bottom-40 -right-40 w-[500px] h-[500px] rounded-full bg-violet-600/[0.12] blur-[140px]" />
+    </>
+  )
+}
+
+function Logo() {
+  return (
+    <div className="text-center space-y-1.5">
+      <h1 className="text-3xl font-bold tracking-tight">
+        <span className="text-white/90">career</span>
+        <span className="bg-gradient-to-r from-indigo-400 to-violet-400 bg-clip-text text-transparent">Navigator</span>
+        <span className="text-white/90">AI</span>
+      </h1>
+      <p className="text-slate-500 text-xs tracking-widest">Discover the career that fits you</p>
+    </div>
+  )
 }
 
 export default function App() {
@@ -78,110 +116,171 @@ export default function App() {
   }
 
   if (phase === 'intro') return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
-      <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-10 max-w-sm w-full space-y-6">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold tracking-tight">
-            <span className="text-slate-800">career</span>
-            <span className="text-indigo-600">Navigator</span>
-            <span className="text-slate-800">AI</span>
-          </h1>
-          <p className="text-slate-400 text-xs tracking-widest mt-1">Discover the career that fits you</p>
-        </div>
-        <p className="text-slate-600 text-sm text-center">Tell us a bit about yourself — your interests, skills, or what matters most to you in a job</p>
-        <textarea
-          className="w-full rounded-2xl border border-slate-200 p-4 text-sm text-slate-700 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-300"
-          rows={4}
-          placeholder="e.g. I enjoy working with people, I have technical skills..."
-          value={userText}
-          onChange={e => setUserText(e.target.value)}
-        />
-        <button
-          onClick={() => startSession(userText)}
-          disabled={!userText.trim()}
-          className="w-full py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 active:scale-95 transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
-        >
-          Continue
-        </button>
-      </div>
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#0c0c10] p-6 overflow-hidden">
+      <Orbs />
+      <IntroCard userText={userText} setUserText={setUserText} onStart={startSession} />
     </div>
   )
 
   if (phase === 'loading') return (
-    <div className="flex items-center justify-center min-h-screen bg-slate-50">
-      <span className="text-slate-400 text-sm tracking-wide">
-        {questionCount === 0 ? 'Loading questions...' : 'Processing answer...'}
-      </span>
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#0c0c10] gap-5 overflow-hidden">
+      <Orbs />
+      <LoadingIndicator questionCount={questionCount} />
     </div>
   )
 
   if (phase === 'results') return (
-    <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6">
-      <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-10 max-w-md w-full space-y-6">
-        <p className="text-slate-400 text-sm tracking-widest uppercase text-center">Recommended careers for you</p>
-        {results.map((r, i) => (
-          <div key={i} className="space-y-1 border-b border-slate-100 pb-4 last:border-0">
-            <div className="flex justify-between items-center">
-              <span className="text-lg font-bold text-slate-800">{r.profession}</span>
-              <span className="text-indigo-600 font-semibold text-sm">{r.match_percentage}%</span>
-            </div>
-            <p className="text-slate-500 text-sm leading-relaxed">{r.explanation}</p>
-          </div>
-        ))}
-        <button
-          onClick={() => { setUserText(''); setPhase('intro') }}
-          className="w-full py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-full hover:bg-indigo-700 active:scale-95 transition-all duration-150"
-        >
-          Start over
-        </button>
-      </div>
+    <div className="relative flex items-center justify-center min-h-screen bg-[#0c0c10] p-6 overflow-hidden">
+      <Orbs />
+      <ResultsCard results={results} onRestart={() => { setUserText(''); setPhase('intro') }} />
     </div>
   )
 
   const progress = (questionCount / (questionCount + 1)) * 100
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-slate-50 to-indigo-50 p-6 gap-6">
+    <div className="relative flex flex-col items-center justify-center min-h-screen bg-[#0c0c10] p-6 gap-6 overflow-hidden">
+      <Orbs />
+      <Logo />
+      <QuizCard
+        question={currentQuestion!}
+        questionCount={questionCount}
+        progress={progress}
+        onAnswer={handleAnswer}
+      />
+    </div>
+  )
+}
 
-      <div className="text-center">
-        <h1 className="text-3xl font-bold tracking-tight">
-          <span className="text-slate-800">career</span>
-          <span className="text-indigo-600">Navigator</span>
-          <span className="text-slate-800">AI</span>
-        </h1>
-        <p className="text-slate-400 text-xs tracking-widest mt-1">Discover the career that fits you</p>
+function IntroCard({ userText, setUserText, onStart }: {
+  userText: string
+  setUserText: (v: string) => void
+  onStart: (text: string) => void
+}) {
+  const ref = useFadeIn()
+  return (
+    <div ref={ref} className="relative bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-3xl p-10 max-w-sm w-full space-y-7 shadow-[0_0_100px_rgba(99,102,241,0.1)]">
+      <Logo />
+      <p className="text-slate-400 text-sm text-center leading-relaxed">
+        Tell us about yourself — your interests, skills, or what matters most to you in a job
+      </p>
+      <textarea
+        className="w-full rounded-2xl bg-white/[0.04] border border-white/[0.08] p-4 text-sm text-slate-200 placeholder:text-slate-600 resize-none focus:outline-none focus:ring-1 focus:ring-indigo-500/60 focus:border-indigo-500/40 transition-all duration-300 ease-out"
+        rows={4}
+        placeholder="e.g. I enjoy working with people, I have technical skills..."
+        value={userText}
+        onChange={e => setUserText(e.target.value)}
+      />
+      <button
+        onClick={() => onStart(userText)}
+        disabled={!userText.trim()}
+        className="w-full py-3 bg-gradient-to-r from-indigo-600 to-violet-600 text-white text-sm font-semibold rounded-2xl hover:from-indigo-500 hover:to-violet-500 active:scale-[0.98] transition-all duration-300 ease-out disabled:opacity-25 disabled:cursor-not-allowed shadow-lg shadow-indigo-600/20"
+      >
+        Continue →
+      </button>
+    </div>
+  )
+}
+
+function LoadingIndicator({ questionCount }: { questionCount: number }) {
+  const ref = useFadeIn()
+  return (
+    <div ref={ref} className="flex flex-col items-center gap-5">
+      <div className="relative w-11 h-11">
+        <div className="absolute inset-0 rounded-full border border-white/[0.06]" />
+        <div className="absolute inset-0 rounded-full border border-transparent border-t-indigo-400/80 animate-spin" />
+        <div className="absolute inset-[3px] rounded-full border border-transparent border-t-violet-400/60 animate-spin [animation-duration:0.7s] [animation-direction:reverse]" />
+      </div>
+      <p className="text-slate-500 text-sm tracking-wide">
+        {questionCount === 0 ? 'Analyzing your profile...' : 'Processing your answer...'}
+      </p>
+    </div>
+  )
+}
+
+function ResultsCard({ results, onRestart }: { results: Profession[]; onRestart: () => void }) {
+  const ref = useFadeIn()
+  return (
+    <div ref={ref} className="relative bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-3xl p-10 max-w-md w-full space-y-7 shadow-[0_0_100px_rgba(99,102,241,0.1)]">
+      <div className="text-center space-y-1">
+        <p className="text-indigo-400 text-xs tracking-widest uppercase font-medium">Your Results</p>
+        <h2 className="text-xl font-bold text-white/90">Recommended Careers</h2>
       </div>
 
-      <div className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] p-10 max-w-sm w-full space-y-8">
-
-        <div className="space-y-1">
-          <div className="flex justify-between text-xs text-slate-400">
-            <span>Question {questionCount}</span>
+      <div className="space-y-6">
+        {results.map((r, i) => (
+          <div key={i} className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 min-w-0">
+                {i === 0 && (
+                  <span className="shrink-0 text-[11px] bg-indigo-500/15 text-indigo-300 border border-indigo-500/25 rounded-full px-2 py-0.5 font-medium">
+                    Top Match
+                  </span>
+                )}
+                <span className="text-base font-semibold text-white/90 truncate">{r.profession}</span>
+              </div>
+              <span className="shrink-0 text-indigo-400 font-bold text-sm tabular-nums">{r.match_percentage}%</span>
+            </div>
+            <div className="w-full bg-white/[0.05] rounded-full h-1 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-indigo-500 to-violet-500 transition-all duration-700 ease-out"
+                style={{ width: `${r.match_percentage}%` }}
+              />
+            </div>
+            <p className="text-slate-400 text-sm leading-[1.75] tracking-[0.01em]">{r.explanation}</p>
           </div>
-          <div className="w-full bg-slate-100 rounded-full h-1.5 overflow-hidden">
-            <div
-              className="bg-indigo-500 h-full rounded-full transition-all duration-500 ease-out"
-              style={{ width: `${progress}%` }}
-            />
-          </div>
+        ))}
+      </div>
+
+      <button
+        onClick={onRestart}
+        className="w-full py-3 bg-white/[0.04] border border-white/[0.08] text-slate-400 text-sm font-medium rounded-2xl hover:bg-white/[0.08] hover:text-white active:scale-[0.98] transition-all duration-300 ease-out"
+      >
+        ← Start over
+      </button>
+    </div>
+  )
+}
+
+function QuizCard({ question, questionCount, progress, onAnswer }: {
+  question: Question
+  questionCount: number
+  progress: number
+  onAnswer: (opt: string) => void
+}) {
+  const ref = useFadeIn()
+  return (
+    <div ref={ref} className="relative bg-white/[0.04] backdrop-blur-2xl border border-white/[0.08] rounded-3xl p-10 max-w-sm w-full space-y-8 shadow-[0_0_100px_rgba(99,102,241,0.1)]">
+      <div className="space-y-2">
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-500">Question {questionCount}</span>
+          <span className="text-indigo-400/80 font-medium tabular-nums">{Math.round(progress)}%</span>
         </div>
-
-        <h2 className="text-xl font-semibold text-slate-800 text-center leading-relaxed">
-          {currentQuestion!.question}
-        </h2>
-
-        <div className="flex flex-col gap-3">
-          {currentQuestion!.options.map((opt, i) => (
-            <button
-              key={i}
-              onClick={() => handleAnswer(opt)}
-              className="w-full py-3 px-4 bg-slate-100 text-slate-700 rounded-2xl text-base font-medium hover:bg-indigo-50 hover:text-indigo-700 active:scale-95 transition-all duration-150 text-left"
-            >
-              {opt}
-            </button>
-          ))}
+        <div className="w-full bg-white/[0.05] rounded-full h-[3px] overflow-hidden">
+          <div
+            className="bg-gradient-to-r from-indigo-500 to-violet-500 h-full rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progress}%` }}
+          />
         </div>
+      </div>
 
+      <h2 className="text-base font-semibold text-white/85 text-center leading-relaxed">
+        {question.question}
+      </h2>
+
+      <div className="flex flex-col gap-2.5">
+        {question.options.map((opt, i) => (
+          <button
+            key={i}
+            onClick={() => onAnswer(opt)}
+            className="group w-full py-3 px-4 bg-white/[0.04] border border-white/[0.08] text-slate-300 rounded-2xl text-sm font-medium hover:bg-indigo-500/[0.08] hover:border-indigo-500/30 hover:text-white active:scale-[0.98] transition-all duration-300 ease-out text-left flex items-center gap-3"
+          >
+            <span className="w-6 h-6 rounded-lg bg-white/[0.04] border border-white/[0.08] group-hover:bg-indigo-500/15 group-hover:border-indigo-500/30 flex items-center justify-center text-xs text-slate-600 group-hover:text-indigo-300 transition-all duration-300 ease-out shrink-0 font-semibold">
+              {String.fromCharCode(65 + i)}
+            </span>
+            {opt}
+          </button>
+        ))}
       </div>
     </div>
   )
