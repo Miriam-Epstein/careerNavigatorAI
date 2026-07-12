@@ -5,7 +5,7 @@ import express from 'express';
 import cors from 'cors';
 import { GoogleGenAI, Type } from '@google/genai';
 import { readFile, writeFile } from 'fs/promises';
-import { randomUUID } from 'crypto';
+import { randomUUID, createHash } from 'crypto';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: resolve(__dirname, '../.env') });
@@ -19,6 +19,46 @@ const MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
 const MAX_ITERATIONS = 8;
 const MIN_QUESTIONS = 3;
 const SESSIONS_DIR = resolve(__dirname, 'sessions');
+
+// ── Webhook Cache ────────────────────────────────────────────────────────────
+// Stores recent webhook analysis results in memory to avoid redundant Gemini calls.
+// Key: SHA-256 hash of userText | Value: { result, expiresAt }
+const CACHE_TTL_MS = 10 * 60 * 1000; // 10 minutes
+const webhookCache = new Map();
+
+// ── Input Validation ────────────────────────────────────────────────────────
+// Protects against empty input, oversized payloads, and prompt injection attempts.
+const MAX_INPUT_LENGTH = 2000;
+const INJECTION_PATTERNS = [
+  /ignore (all |previous |prior )?instructions/i,
+  /forget (everything|all|your instructions)/i,
+  /you are now/i,
+  /system prompt/i,
+  /reveal (your|the) (prompt|instructions|api key)/i,
+];
+
+function validateInput(text, fieldName = 'input') {
+  if (!text || typeof text !== 'string' || text.trim().length === 0)
+    return `${fieldName} is required and cannot be empty`;
+  if (text.length > MAX_INPUT_LENGTH)
+    return `${fieldName} exceeds maximum length of ${MAX_INPUT_LENGTH} characters`;
+  if (INJECTION_PATTERNS.some(p => p.test(text)))
+    return `${fieldName} contains disallowed content`;
+  return null; // valid
+}
+
+function getCached(userText) {
+  const key = createHash('sha256').update(userText).digest('hex');
+  const entry = webhookCache.get(key);
+  if (!entry) return null;
+  if (Date.now() > entry.expiresAt) { webhookCache.delete(key); return null; }
+  return entry.result;
+}
+
+function setCache(userText, result) {
+  const key = createHash('sha256').update(userText).digest('hex');
+  webhookCache.set(key, { result, expiresAt: Date.now() + CACHE_TTL_MS });
+}
 
 // ── Session helpers ──────────────────────────────────────────────────────────
 
@@ -256,7 +296,8 @@ async function runAgentLoop(session) {
 // a structured JSON result that Make can use to update a CRM or Google Sheet.
 app.post('/api/webhook', async (req, res) => {
   const { name, email, userText } = req.body;
-  if (!userText) return res.status(400).json({ error: 'userText is required' });
+  const webhookErr = validateInput(userText, 'userText');
+  if (webhookErr) return res.status(400).json({ error: webhookErr });
 
   const session = { ...createSession(), userText, meta: { name, email } };
 
@@ -271,12 +312,20 @@ app.post('/api/webhook', async (req, res) => {
     },
   };
 
+  // Return cached result if this exact text was analyzed recently
+  const cached = getCached(userText);
+  if (cached) {
+    console.log('[Webhook] Cache hit — skipping Gemini call');
+    return res.json({ sessionId: 'cached', name, email, analysis: cached, fromCache: true });
+  }
+
   const analysis = await callGemini(
     `נתח את הטקסט הבא של מועמד לעבודה והחזר סיכום, כישורים מובילים והמלצת מקצוע:\n\n"${userText}"`,
     { responseMimeType: 'application/json', responseSchema: summarySchema }
   );
 
   session.webhookAnalysis = JSON.parse(analysis.text);
+  setCache(userText, session.webhookAnalysis);
   await saveSession(session);
 
   res.json({
@@ -299,6 +348,11 @@ app.post('/api/agent', async (req, res) => {
   let session = await loadSession(sessionId);
   if (!session) return res.status(404).json({ error: 'Session not found' });
   if (session.status === 'completed') return res.json({ done: true, results: session.results });
+
+  if (answer) {
+    const answerErr = validateInput(answer, 'answer');
+    if (answerErr) return res.status(400).json({ error: answerErr });
+  }
 
   if (answer && session.history.length > 0) {
     const last = session.history[session.history.length - 1];
